@@ -50,7 +50,8 @@ export class AuthService {
     return this.signTokens(user.id, user.email, user.role);
   }
 
-  private async signTokens(userId: number, email: string, role: string) {
+  // Changed userId parameter from number to string (UUID)
+  private async signTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
 
     const accessToken = await this.jwt.signAsync(payload, {
@@ -72,20 +73,21 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  async refresh(userId: number, refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-  const user = await this.db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
+  // Changed userId parameter from number to string (UUID)
+  async refresh(userId: string, refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
 
-  if (!user || !user.refreshTokenHash) {
-    throw new UnauthorizedException("Invalid token");
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException("Invalid token");
+    }
+
+    const valid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    if (!valid) {
+      throw new UnauthorizedException("Invalid token");
+    }
+
+    return this.signTokens(user.id, user.email, user.role);
   }
-
-  const valid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-  if (!valid) {
-    throw new UnauthorizedException("Invalid token");
-  }
-
-  return this.signTokens(user.id, user.email, user.role);
-}
 }

@@ -22,7 +22,7 @@ export class AuthController {
   @UseGuards(RefreshGuard)
   @Post("refresh")
   async refresh(@Req() req: Request, @Body("refreshToken") refreshToken: string) {
-    const user = req.user as { userId: number; email: string; role: string };
+    const user = req.user as { userId: string; email: string; role: string };
     return this.authService.refresh(user.userId, refreshToken);
   }
 }
