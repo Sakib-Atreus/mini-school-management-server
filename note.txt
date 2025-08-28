@@ -1,4 +1,16 @@
 docker build -t your_app_name .
 docker run -d -p 3000:3000 your_app_name
 
+docker compose build
+docker compose run --rm app npx drizzle-kit migrate
+docker compose up
+docker compose down
+
+# If you want everything in one command:
+
 docker compose up -d --build
+
+
+# Then inside the running container, run migrations:
+
+docker compose exec app npx drizzle-kit migrate
