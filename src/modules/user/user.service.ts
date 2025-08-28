@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DRIZZLE } from '../../drizzle/drizzle.module';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../../drizzle/schema/schema';
@@ -43,4 +43,33 @@ export class UsersService {
   async findAll() {
     return this.db.select().from(schema.users);
   }
+  
+// Get all students only
+  async getAllStudents() {
+    const students = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.role, 'student'));
+    return students;
+  }
+
+  // Get single student by ID
+  async getStudentById(id: string) {
+    if (!id || typeof id !== 'string') {
+      throw new BadRequestException('Invalid ID');
+    }
+
+    const student = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.role, 'student'));
+
+    if (!student.length) {
+      throw new NotFoundException('Student not found');
+    }
+
+    return student[0];
+  }
+
+
 }
