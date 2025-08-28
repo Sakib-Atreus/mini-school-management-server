@@ -1,8 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../../drizzle/schema/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '../../drizzle/drizzle.module';
+import { EnrollStudentDto } from './dto/enroll-student.dto';
 
 @Injectable()
 export class StudentsService {
@@ -10,7 +11,9 @@ export class StudentsService {
     @Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>
   ) {}
 
-  async enrollUserInClass(userId: number, classId: number) {
+  async enrollUserInClass(classId: string, enrollStudentDto: EnrollStudentDto) {
+    const { userId, age } = enrollStudentDto;
+
     const [user] = await this.db
       .select()
       .from(schema.users)
@@ -27,17 +30,40 @@ export class StudentsService {
       .select()
       .from(schema.students)
       .where(eq(schema.students.user_id, userId));
+
     if (!existingStudent) {
+      // Check if user is already enrolled in this specific class
+      const [duplicateEnrollment] = await this.db
+        .select()
+        .from(schema.students)
+        .where(and(
+          eq(schema.students.user_id, userId),
+          eq(schema.students.classId, classId)
+        ))
+        .limit(1);
+
+      if (duplicateEnrollment) {
+        throw new ConflictException(`${user.name} is already enrolled in class ${cls.name}`);
+      }
+
       await this.db.insert(schema.students).values({
         user_id: user.id,
         name: user.name,
-        age: 0,
+        age: age,
         classId: classId,
       });
     } else {
+      // Check if trying to enroll in the same class again
+      if (existingStudent.classId === classId) {
+        throw new ConflictException(`${user.name} is already enrolled in class ${cls.name}`);
+      }
+
       await this.db
         .update(schema.students)
-        .set({ classId: classId })
+        .set({ 
+          classId: classId,
+          age: age
+        })
         .where(eq(schema.students.user_id, userId));
     }
 
@@ -46,10 +72,10 @@ export class StudentsService {
       .set({ role: 'student' as schema.Role })
       .where(eq(schema.users.id, userId));
 
-    return { message: `${user.name} enrolled in class ${cls.name}` };
+    return { message: `${user.name} (age ${age}) enrolled in class ${cls.name}` };
   }
 
-  async getStudentsByClass(classId: number) {
+  async getStudentsByClass(classId: string) {
     return this.db
       .select()
       .from(schema.students)

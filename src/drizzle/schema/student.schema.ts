@@ -1,13 +1,14 @@
-import { pgTable, serial, text, integer, index } from "drizzle-orm/pg-core";
+
+import { pgTable, uuid, text, integer, index } from "drizzle-orm/pg-core";
 
 export const students = pgTable(
   "students",
   {
-    id: serial("id").primaryKey(),
-    user_id: integer("user_id").notNull(),
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id").notNull(),
     name: text("name").notNull(),
     age: integer("age").notNull(),
-    classId: integer("class_id"),
+    classId: uuid("class_id"),
   },
   (t) => ({
     idIdx: index("students_id_idx").on(t.id),

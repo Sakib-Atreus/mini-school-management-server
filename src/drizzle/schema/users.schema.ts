@@ -1,4 +1,4 @@
-import { pgTable, serial, text, index, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, index, timestamp } from "drizzle-orm/pg-core";
 
 export const roles = ["admin", "teacher", "student"] as const;
 export type Role = typeof roles[number];
@@ -6,7 +6,7 @@ export type Role = typeof roles[number];
 export const users = pgTable(
   "users",
   {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),

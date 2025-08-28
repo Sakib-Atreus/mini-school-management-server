@@ -5,8 +5,8 @@ import {
   Body,
   UseGuards,
   Param,
-  ParseIntPipe,
   Get,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { CreateClassDto } from './dto/create-class.dto';
 import { EnrollStudentDto } from '../student/dto/enroll-student.dto';
@@ -33,15 +33,15 @@ export class ClassesController {
   @Post(':id/enroll')
   @Roles('admin', 'teacher')
   async enrollStudent(
-    @Param('id', ParseIntPipe) classId: number,
+    @Param('id', ParseUUIDPipe) classId: string,
     @Body() dto: EnrollStudentDto,
   ) {
-    return this.studentService.enrollUserInClass(dto.userId, classId);
+    return this.studentService.enrollUserInClass(classId, dto);
   }
 
   @Get(':id/students')
   @Roles('admin', 'teacher')
-  async getStudents(@Param('id', ParseIntPipe) classId: number) {
+  async getStudents(@Param('id', ParseUUIDPipe) classId: string) {
     return this.studentService.getStudentsByClass(classId);
   }
 }

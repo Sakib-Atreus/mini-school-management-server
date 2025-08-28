@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -17,51 +18,94 @@ const db = drizzle(pool, { schema }) as NodePgDatabase<typeof schema>;
 const hashPassword = (password: string) => bcrypt.hashSync(password, 10);
 
 async function main() {
-  // 1️⃣ Seed some classes
-  const classIds: number[] = [];
+  console.log('Starting to seed database...');
+
+  // 1️⃣ Seed classes first
+  console.log('Seeding classes...');
+  const classIds: string[] = [];
+  
   for (let i = 0; i < 5; i++) {
-    const insertedClass = await db
+    const [insertedClass] = await db
       .insert(schema.classes)
       .values({
         name: `Class ${i + 1}`,
         section: faker.helpers.arrayElement(['A', 'B', 'C']),
       })
       .returning();
-
-    classIds.push(insertedClass[0].id);
+    
+    classIds.push(insertedClass.id);
+    console.log(`Created class: ${insertedClass.name} - ${insertedClass.section}`);
   }
 
-  // 2️⃣ Seed users & students
-  const userIds: number[] = [];
+  // 2️⃣ Seed users and students
+  console.log('Seeding users and students...');
+  
   for (let i = 0; i < 20; i++) {
-    const role = 'student'; 
-    const insertedUser = await db
+    // Insert user first
+    const [insertedUser] = await db
       .insert(schema.users)
       .values({
         name: faker.person.firstName() + ' ' + faker.person.lastName(),
         email: faker.internet.email(),
         passwordHash: hashPassword('123456'),
-        role: role,
+        role: 'student',
       })
       .returning();
 
-    const userId = insertedUser[0].id as number;
-    userIds.push(userId);
-
-    // Insert student linked to user and random class
+    // Insert corresponding student
     await db.insert(schema.students).values({
-      user_id: userId, 
-      name: insertedUser[0].name,
+      user_id: insertedUser.id,
+      name: insertedUser.name,
       age: faker.number.int({ min: 10, max: 20 }),
       classId: faker.helpers.arrayElement(classIds),
     });
+    
+    console.log(`Created student: ${insertedUser.name}`);
   }
 
-  console.log('✅ Dummy data seeded successfully');
-  process.exit(0);
+  // 3️⃣ Create admin user
+  console.log('Creating admin user...');
+  const [adminUser] = await db
+    .insert(schema.users)
+    .values({
+      name: 'Admin User',
+      email: 'admin@school.com',
+      passwordHash: hashPassword('admin123'),
+      role: 'admin',
+    })
+    .returning();
+  console.log(`Created admin: ${adminUser.name}`);
+
+  // 4️⃣ Create teacher user
+  console.log('Creating teacher user...');
+  const [teacherUser] = await db
+    .insert(schema.users)
+    .values({
+      name: 'Teacher User',
+      email: 'teacher@school.com',
+      passwordHash: hashPassword('teacher123'),
+      role: 'teacher',
+    })
+    .returning();
+  console.log(`Created teacher: ${teacherUser.name}`);
+
+  console.log('\n=== SEEDING COMPLETED ===');
+  console.log('Test accounts created:');
+  console.log('Admin: admin@school.com / admin123');
+  console.log('Teacher: teacher@school.com / teacher123');
+  console.log('Students: any student email / 123456');
+  
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    console.log('Seeding completed successfully!');
+  })
+  .catch((err) => {
+    console.error('Seeding failed:', err);
+    process.exit(1);
+  })
+  .finally(() => {
+    pool.end();
+    process.exit(0);
+  });

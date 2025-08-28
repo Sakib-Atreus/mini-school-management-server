@@ -1,9 +1,9 @@
-import { pgTable, serial, text, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, index } from "drizzle-orm/pg-core";
 
 export const classes = pgTable(
   "classes",
   {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     section: text("section").notNull(),
   },
